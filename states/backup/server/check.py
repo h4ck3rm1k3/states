@@ -133,7 +133,7 @@ def main():
                 dates = hosts[host][name][type].keys()
                 dates.sort()
                 latest = hosts[host][name][type][dates[-1]]
-                logger.debug("Latest backup %s: %s", latest.date.isoformat())
+                logger.debug("Latest backup %s: %s", (latest, latest.date.isoformat()))
                 if now - latest.date > max_time:
                     logger.debug("Expired backup %s", latest)
                     missing_backup.append('-'.join((host, type)))
