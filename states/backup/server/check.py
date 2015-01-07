@@ -33,10 +33,10 @@ class BackupFile(object):
         'sql': 'postgresql'
     }
 
-    def __init__(self, hostname, name, type, date, compression='.gz'):
+    def __init__(self, hostname, name, type_name, date, compression='.gz'):
         self.hostname = hostname
         self.name = name
-        self.type = type
+        self.type_name = type_name
         self.date = date
         self.compression = compression
 
@@ -46,10 +46,10 @@ class BackupFile(object):
         return filename of this backup
         """
         return '-'.join((
-            self.hostname, self.name, self.type,
+            self.hostname, self.name, self.type_name,
             self.date.strftime("%Y-%m-%d-%H_%M_%S"),
-#            self.format_type[self.type], self.compression
-            self.type, self.compression
+            #self.format_type[self.type], self.compression
+            self.type_name, self.compression
         ))
 
     def __repr__(self):
@@ -64,10 +64,10 @@ class BackupFile(object):
         :return: instance
         :rtype: :class:`BackupFile`
         """
-        prefix, type, compression = filename.split('.')
+        prefix, type_name, compression = filename.split('.')
         items = prefix.split('-')
-        format = cls.format_type[type]
-        if format not in items:
+        format_str = cls.format_type[type_name]
+        if format_str not in items:
             msg = "invalid extension (%s) and type in %s" % (compression,
                                                              filename)
             logger.warning(msg)
@@ -109,34 +109,34 @@ def main():
     max_time = datetime.timedelta(hours=36)
     hosts = {}
     backup = BackupDirectory('/var/lib/backup')
-    for file in backup:
+    for file_obj in backup:
         try:
-            host = hosts[file.hostname]
+            host = hosts[file_obj.hostname]
         except KeyError:
-            host = hosts[file.hostname] = {}
+            host = hosts[file_obj.hostname] = {}
         try:
-            name = host[file.name]
+            name = host[file_obj.name]
         except KeyError:
-            name = host[file.name] = {}
+            name = host[file_obj.name] = {}
         try:
-            type = name[file.type]
+            type_obj = name[file_obj.type_name]
         except KeyError:
-            type = name[file.type] = {}
-        type[file.date] = file
+            type_obj = name[file_obj.type_name] = {}
+        type_obj[file_obj.date] = file_obj
 
     number_backups = 0
     missing_backup = []
     for host in hosts:
         for name in hosts[host]:
-            for type in hosts[host][name]:
-                logger.debug("Process %s - %s type %s", host, name, type)
-                dates = hosts[host][name][type].keys()
+            for type_name in hosts[host][name]:
+                logger.debug("Process %s - %s type %s", host, name, type_name)
+                dates = hosts[host][name][type_name].keys()
                 dates.sort()
-                latest = hosts[host][name][type][dates[-1]]
-                logger.debug("Latest backup %s: %s", (latest, latest.date.isoformat()))
+                latest = hosts[host][name][type_name][dates[-1]]
+                logger.debug("Latest backup %s: %s", latest, latest.date.isoformat())
                 if now - latest.date > max_time:
                     logger.debug("Expired backup %s", latest)
-                    missing_backup.append('-'.join((host, type)))
+                    missing_backup.append('-'.join((host, type_name)))
                 else:
                     logger.debug("Good backup %s", latest)
                     number_backups += 1
